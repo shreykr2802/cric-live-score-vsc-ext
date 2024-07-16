@@ -51,6 +51,10 @@ async function fetchLiveMatches(): Promise<Match[]> {
   return response.data;
 }
 
+function getFirstLiveMatch(matches: Match[]) {
+  return matches.find((match) => match.innerText.includes("LIVE"));
+}
+
 function displayMatches(matches: Match[]) {
   const panel = vscode.window.createWebviewPanel(
     "cricketScores",
@@ -60,17 +64,17 @@ function displayMatches(matches: Match[]) {
   );
 
   panel.webview.html = getWebviewContent(matches);
-  updateStatusBar(matches[2]);
+  updateStatusBar(getFirstLiveMatch(matches) ?? matches[0]);
 }
 
 function updateStatusBar(match: Match) {
   if (match && match.innerText.includes("LIVE")) {
     const matchData = match.text.split("&&");
-    if (matchData.length !== 6) {
-      statusBarItem.text = `$(pulse) ${matchData[2].trim()} vs ${matchData[3].trim()}`;
-    } else {
-      statusBarItem.text = `$(pulse) ${matchData[2].trim()} vs ${matchData[4].trim()} - ${matchData[3].trim()}`;
-    }
+    const regex = /\(\d?\d?(\.\d+)? ov\)|\(\d?\d?(\.\d+)?\/\d+ ov,/;
+    const team1 = matchData[2].trim();
+    const team2 = matchData[4].trim();
+    const currentScore = regex.test(matchData[5]) ? matchData[5].trim() : matchData[3].trim();
+    statusBarItem.text = `$(pulse) ${team1} vs ${team2} - ${currentScore}`;
     statusBarItem.show();
   } else {
     statusBarItem.hide();
