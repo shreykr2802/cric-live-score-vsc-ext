@@ -45,7 +45,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function fetchLiveMatches(): Promise<Match[]> {
-  const response = await axios.get("http://localhost:3000/live");
+  const response = await axios.get("http://localhost:3000/live", {
+    headers: { SECRET: process.env.SECRET },
+  });
   return response.data;
 }
 
@@ -58,7 +60,7 @@ function displayMatches(matches: Match[]) {
   );
 
   panel.webview.html = getWebviewContent(matches);
-  updateStatusBar(matches[0]);
+  updateStatusBar(matches[2]);
 }
 
 function updateStatusBar(match: Match) {
