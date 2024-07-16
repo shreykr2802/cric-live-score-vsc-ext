@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 interface Match {
   link: string;
   innerText: string;
+  text: string;
 }
 
 let statusBarItem: vscode.StatusBarItem;
@@ -22,10 +23,17 @@ export function activate(context: vscode.ExtensionContext) {
     async () => {
       try {
         const liveMatches = await fetchLiveMatches();
-		console.log(liveMatches);
-        displayMatches(liveMatches);
+        displayMatches(
+          liveMatches.map((match) => ({
+            innerText: match.innerText
+              .replaceAll("&&", " ")
+              .replaceAll("null", ""),
+            link: match.link,
+            text: match.innerText,
+          }))
+        );
       } catch (error) {
-		console.log(error);
+        console.log(error);
         vscode.window.showErrorMessage("Failed to fetch live cricket scores.");
       }
     }
@@ -33,22 +41,12 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(disposable);
 
-  setInterval(async () => {
-    try {
-      const liveMatches = await fetchLiveMatches();
-      updateStatusBar(liveMatches[0]);
-    } catch (error) {
-      console.error("Failed to update scores:", error);
-    }
-  }, 5 * 60 * 1000);
-
   vscode.commands.executeCommand("cricketScores.showLiveScores");
 }
 
-async function fetchLiveMatches(): Promise<any> {
+async function fetchLiveMatches(): Promise<Match[]> {
   const response = await axios.get("http://localhost:3000/live");
-  console.log("reponse", response);
-  return response;
+  return response.data;
 }
 
 function displayMatches(matches: Match[]) {
@@ -65,7 +63,12 @@ function displayMatches(matches: Match[]) {
 
 function updateStatusBar(match: Match) {
   if (match && match.innerText.includes("LIVE")) {
-    statusBarItem.text = `$(pulse) ${match.innerText.split(",")[1].trim()}`;
+    const matchData = match.text.split("&&");
+    if (matchData.length !== 6) {
+      statusBarItem.text = `$(pulse) ${matchData[2].trim()} vs ${matchData[3].trim()}`;
+    } else {
+      statusBarItem.text = `$(pulse) ${matchData[2].trim()} vs ${matchData[4].trim()} - ${matchData[3].trim()}`;
+    }
     statusBarItem.show();
   } else {
     statusBarItem.hide();
