@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { Match } from './types';
+import { Match, MatchItem } from './types';
+import { getSantizedMatchesData } from './utils';
 
 export function createLiveMatchesProvider(liveMatches: Match[]) {
   const onDidChangeTreeData: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -15,7 +16,7 @@ export function createLiveMatchesProvider(liveMatches: Match[]) {
   };
 
   function getLiveMatches(): MatchItem[] {
-    return liveMatches.map(match => createMatchItem(match.innerText));
+    return getSantizedMatchesData(liveMatches).map(match => createMatchItem(match));
   }
 
   function refresh(): void {
@@ -25,14 +26,15 @@ export function createLiveMatchesProvider(liveMatches: Match[]) {
   return { provider, refresh };
 }
 
-function createMatchItem(label: string): MatchItem {
+function createMatchItem(match: Match): MatchItem {
   return {
-    label,
-    collapsibleState: vscode.TreeItemCollapsibleState.None,
-    contextValue: 'match'
+    label: match.innerText,
+    collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    contextValue: 'match',
+    command: {
+      command: 'cricketScores.openMatch',
+      title: 'Open Match',
+      arguments: [match.innerText]
+    },
   } as MatchItem;
-}
-
-interface MatchItem extends vscode.TreeItem {
-  label: string;
 }

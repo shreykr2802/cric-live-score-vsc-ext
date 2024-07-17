@@ -4,7 +4,7 @@ import { createLiveMatchesProvider } from "./LiveMatchesProvider";
 import { createDoneUpcomingProvider } from "./DoneUpcomingProvider";
 import { fetchLiveMatches } from "./api";
 import { Match } from "./types";
-import { getDoneUpcomingMatches, getFirstLiveMatch, getLiveMatches, getMatchDataForStatusBar, getSantizedMatchesData } from "./utils";
+import { getDoneUpcomingMatches, getFirstLiveMatch, getLiveMatches, getMatchDataForStatusBar } from "./utils";
 
 let statusBarItem: vscode.StatusBarItem;
 
@@ -18,18 +18,17 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(statusBarItem);
 
   const liveMatchesData = await fetchLiveMatches();
-
   const liveMatches = createLiveMatchesProvider(getLiveMatches(liveMatchesData));
   const doneUpcoming = createDoneUpcomingProvider(getDoneUpcomingMatches(liveMatchesData));
 
   vscode.window.registerTreeDataProvider('live-matches', liveMatches.provider);
   vscode.window.registerTreeDataProvider('done-upcoming', doneUpcoming.provider);
 
-  vscode.commands.registerCommand('extension.refreshLiveMatches', () => liveMatches.refresh());
-  vscode.commands.registerCommand('extension.refreshDoneUpcoming', () => doneUpcoming.refresh());
+  vscode.commands.registerCommand('cricketScores.refreshLiveMatches', () => liveMatches.refresh());
+  vscode.commands.registerCommand('cricketScores.refreshDoneUpcoming', () => doneUpcoming.refresh());
 
-  vscode.commands.registerCommand('extension.openMatch', (match) => {
-    vscode.window.showInformationMessage(`Opening match: ${match.label}`);
+  vscode.commands.registerCommand('cricketScores.openMatch', (match) => {
+    vscode.window.showInformationMessage(`Opening match: ${match}`);
   });
 
   const disposable = vscode.commands.registerCommand(
