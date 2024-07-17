@@ -17,7 +17,28 @@
         "command": "cricketScores.showLiveScores",
         "title": "Show Live Cricket Scores"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "Cric-Live",
+          "title": "Live Cricket",
+          "icon": "src/resources/cric.svg"
+        }
+      ]
+    },
+    "views": {
+      "Cric-Live": [
+        {
+          "id": "live-matches",
+          "name": "Live Matches"
+        },
+        {
+          "id": "done-upcoming",
+          "name": "Done & Upcoming"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
