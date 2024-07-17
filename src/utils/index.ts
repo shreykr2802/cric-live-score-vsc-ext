@@ -1,6 +1,6 @@
 import { Match } from "../types";
 
-const liveMatchesTypes = ["LIVE", "DELAYED", "TEA", "LUNCH", "DRINKS"];
+const liveMatchesTypes = ["LIVE", "DELAYED", "TEA", "LUNCH", "DRINKS", "INNINGS BREAK", "STUMPS"];
 
 function getFirstLiveMatch(matches: Match[]) {
   return matches.find((match) =>

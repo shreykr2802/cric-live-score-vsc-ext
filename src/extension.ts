@@ -1,10 +1,14 @@
-
 import * as vscode from "vscode";
 import { createLiveMatchesProvider } from "./LiveMatchesProvider";
 import { createDoneUpcomingProvider } from "./DoneUpcomingProvider";
 import { fetchLiveMatches } from "./api";
 import { Match } from "./types";
-import { getDoneUpcomingMatches, getFirstLiveMatch, getLiveMatches, getMatchDataForStatusBar } from "./utils";
+import {
+  getDoneUpcomingMatches,
+  getFirstLiveMatch,
+  getLiveMatches,
+  getMatchDataForStatusBar,
+} from "./utils";
 
 let statusBarItem: vscode.StatusBarItem;
 
@@ -18,17 +22,31 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(statusBarItem);
 
   const liveMatchesData = await fetchLiveMatches();
-  const liveMatches = createLiveMatchesProvider(getLiveMatches(liveMatchesData));
-  const doneUpcoming = createDoneUpcomingProvider(getDoneUpcomingMatches(liveMatchesData));
+  const liveMatches = createLiveMatchesProvider(
+    getLiveMatches(liveMatchesData)
+  );
+  const doneUpcoming = createDoneUpcomingProvider(
+    getDoneUpcomingMatches(liveMatchesData)
+  );
 
-  vscode.window.registerTreeDataProvider('live-matches', liveMatches.provider);
-  vscode.window.registerTreeDataProvider('done-upcoming', doneUpcoming.provider);
+  vscode.window.registerTreeDataProvider("live-matches", liveMatches.provider);
+  vscode.window.registerTreeDataProvider(
+    "done-upcoming",
+    doneUpcoming.provider
+  );
 
-  vscode.commands.registerCommand('cricketScores.refreshLiveMatches', () => liveMatches.refresh());
-  vscode.commands.registerCommand('cricketScores.refreshDoneUpcoming', () => doneUpcoming.refresh());
+  vscode.commands.registerCommand("cricketScores.refreshMatches", () => {
+    liveMatches.refresh();
+    doneUpcoming.refresh();
+  });
 
-  vscode.commands.registerCommand('cricketScores.openMatch', (match) => {
-    vscode.window.showInformationMessage(`Opening match: ${match}`);
+  vscode.commands.registerCommand("cricketScores.openMatch", (match) => {
+    vscode.window.showInformationMessage(`Match Highlight: ${match}`);
+  });
+
+  vscode.commands.registerCommand("cricketScores.pinMatch", (match) => {
+    vscode.window.showInformationMessage(`Pinned Match: ${match.label}`);
+    updateStatusBar(match);
   });
 
   const disposable = vscode.commands.registerCommand(

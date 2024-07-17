@@ -7,5 +7,6 @@ export interface Match {
 }
 
 export interface MatchItem extends vscode.TreeItem {
+  innerText: string;
   label: string;
 }

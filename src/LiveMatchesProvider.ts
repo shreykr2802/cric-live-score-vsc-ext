@@ -28,8 +28,9 @@ export function createLiveMatchesProvider(liveMatches: Match[]) {
 
 function createMatchItem(match: Match): MatchItem {
   return {
+    innerText: match.text,
     label: match.innerText,
-    collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    collapsibleState: vscode.TreeItemCollapsibleState.None,
     contextValue: 'match',
     command: {
       command: 'cricketScores.openMatch',

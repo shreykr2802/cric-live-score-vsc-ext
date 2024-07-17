@@ -16,19 +16,35 @@
       {
         "command": "cricketScores.showLiveScores",
         "title": "Show Live Cricket Scores"
+      },
+      {
+        "command": "cricketScores.refreshMatches",
+        "title": "Refresh Matches",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "cricketScores.pinMatch",
+        "title": "pin",
+        "icon": {
+          "light": "resources/light/pin.svg",
+          "dark": "resources/dark/pin.svg"
+        }
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "Cric-Live",
+          "id": "liveCricketScores",
           "title": "Live Cricket",
-          "icon": "src/resources/cric.svg"
+          "icon": "resources/cric.svg"
         }
       ]
     },
     "views": {
-      "Cric-Live": [
+      "liveCricketScores": [
         {
           "id": "live-matches",
           "name": "Live Matches"
@@ -38,7 +54,29 @@
           "name": "Done & Upcoming"
         }
       ]
-    }
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "cricketScores.refreshMatches",
+          "when": "view == live-matches",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "cricketScores.pinMatch",
+          "when": "view == live-matches && viewItem == match",
+          "group": "inline"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "live-matches",
+        "contents": "No Live Matches at the moment!"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
