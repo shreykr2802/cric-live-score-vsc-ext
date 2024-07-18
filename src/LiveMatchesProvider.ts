@@ -1,9 +1,10 @@
-import * as vscode from 'vscode';
-import { Match, MatchItem } from './types';
-import { getSantizedMatchesData } from './utils';
+import * as vscode from "vscode";
+import { Match, MatchItem } from "./types";
+import { getMatchDataForActivityBar, getSantizedMatchesData } from "./utils";
 
 export function createLiveMatchesProvider(liveMatches: Match[]) {
-  const onDidChangeTreeData: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+  const onDidChangeTreeData: vscode.EventEmitter<void> =
+    new vscode.EventEmitter<void>();
   const provider: vscode.TreeDataProvider<MatchItem> = {
     onDidChangeTreeData: onDidChangeTreeData.event,
     getTreeItem: (element: MatchItem) => element,
@@ -12,11 +13,13 @@ export function createLiveMatchesProvider(liveMatches: Match[]) {
         return Promise.resolve(getLiveMatches());
       }
       return Promise.resolve([]);
-    }
+    },
   };
 
   function getLiveMatches(): MatchItem[] {
-    return getSantizedMatchesData(liveMatches).map(match => createMatchItem(match));
+    return getSantizedMatchesData(liveMatches).map((match) =>
+      createMatchItem(match)
+    );
   }
 
   function refresh(): void {
@@ -29,13 +32,14 @@ export function createLiveMatchesProvider(liveMatches: Match[]) {
 function createMatchItem(match: Match): MatchItem {
   return {
     innerText: match.text,
-    label: match.innerText,
+    label: getMatchDataForActivityBar(match.text),
+    link: match.link,
     collapsibleState: vscode.TreeItemCollapsibleState.None,
-    contextValue: 'match',
+    contextValue: "match",
     command: {
-      command: 'cricketScores.openMatch',
-      title: 'Open Match',
-      arguments: [match.innerText]
+      command: "cricketScores.openMatch",
+      title: "Open Match",
+      arguments: [match.innerText],
     },
   } as MatchItem;
 }

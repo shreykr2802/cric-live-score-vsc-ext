@@ -29,7 +29,7 @@ export function createDoneUpcomingProvider(doneAndUpcomingMatches: Match[]) {
 function createMatchItem(match: Match): MatchItem {
   return {
     label: match.innerText,
-    collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+    collapsibleState: vscode.TreeItemCollapsibleState.None,
     contextValue: 'match',
     command: {
       command: 'cricketScores.openMatch',

@@ -1,11 +1,12 @@
 import * as vscode from "vscode";
 import { createLiveMatchesProvider } from "./LiveMatchesProvider";
 import { createDoneUpcomingProvider } from "./DoneUpcomingProvider";
-import { fetchLiveMatches } from "./api";
-import { Match } from "./types";
+import { fetchLiveMatchDetailsFromUrl, fetchLiveMatches } from "./api";
+import { LiveMatch, Match } from "./types";
 import {
   getDoneUpcomingMatches,
   getFirstLiveMatch,
+  getLiveMatchDataForStatusBar,
   getLiveMatches,
   getMatchDataForStatusBar,
 } from "./utils";
@@ -40,28 +41,58 @@ export async function activate(context: vscode.ExtensionContext) {
     doneUpcoming.refresh();
   });
 
-  vscode.commands.registerCommand("cricketScores.openMatch", (match) => {
+  vscode.commands.registerCommand("cricketScores.openMatch", (match: Match) => {
     vscode.window.showInformationMessage(`Match Highlight: ${match}`);
   });
 
-  vscode.commands.registerCommand("cricketScores.pinMatch", (match) => {
-    vscode.window.showInformationMessage(`Pinned Match: ${match.label}`);
-    updateStatusBar(match);
-  });
+  vscode.commands.registerCommand(
+    "cricketScores.pinMatch",
+    async (match: Match) => {
+      try {
+        const liveMatchData = await fetchLiveMatchDetailsFromUrl(match.link);
+        updateLiveStatusBar(liveMatchData);
+        vscode.window.showInformationMessage("Match Pinned to Status Bar!");
+      } catch (err) {
+        console.log("err", err);
+        vscode.window.showErrorMessage("Pinning Match Failed");
+      }
+    }
+  );
 
   const disposable = vscode.commands.registerCommand(
     "cricketScores.showLiveScores",
-    () => updateStatusBar(getFirstLiveMatch(liveMatchesData))
+    async () => {
+      const liveMatch = getFirstLiveMatch(liveMatchesData);
+      if (liveMatch) {
+        const liveMatchData = await fetchLiveMatchDetailsFromUrl(
+          liveMatch.link
+        );
+        updateLiveStatusBar(liveMatchData);
+      }
+    }
   );
 
   context.subscriptions.push(disposable);
   vscode.commands.executeCommand("cricketScores.showLiveScores");
 }
 
-function updateStatusBar(match: Match | undefined) {
-  if (match) {
-    const matchData = getMatchDataForStatusBar(match);
+/* not used anymore
+// function updateStatusBar(match: Match | undefined) {
+//   if (match) {
+//     const matchData = getMatchDataForStatusBar(match);
+//     statusBarItem.text = `$(pulse) ${matchData[0]} vs ${matchData[1]} - ${matchData[2]}`;
+//     statusBarItem.show();
+//   } else {
+//     statusBarItem.hide();
+//   }
+// }
+*/
+
+function updateLiveStatusBar(liveMatchData: LiveMatch) {
+  if (liveMatchData) {
+    const matchData = getLiveMatchDataForStatusBar(liveMatchData);
     statusBarItem.text = `$(pulse) ${matchData[0]} vs ${matchData[1]} - ${matchData[2]}`;
+    statusBarItem.tooltip = `${matchData[0]} vs ${matchData[1]} - ${matchData[2]}`;
     statusBarItem.show();
   } else {
     statusBarItem.hide();

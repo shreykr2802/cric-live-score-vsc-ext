@@ -10,3 +10,5 @@ export interface MatchItem extends vscode.TreeItem {
   innerText: string;
   label: string;
 }
+
+export type LiveMatch = Record<"title" | "value", string>[];
