@@ -51,6 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
       try {
         const liveMatchData = await fetchLiveMatchDetailsFromUrl(match.link);
         updateLiveStatusBar(liveMatchData);
+        startLiveFetch(match.link);
         vscode.window.showInformationMessage("Match Pinned to Status Bar!");
       } catch (err) {
         console.log("err", err);
@@ -68,6 +69,7 @@ export async function activate(context: vscode.ExtensionContext) {
           liveMatch.link
         );
         updateLiveStatusBar(liveMatchData);
+        startLiveFetch(liveMatch.link);
       }
     }
   );
@@ -97,6 +99,18 @@ function updateLiveStatusBar(liveMatchData: LiveMatch) {
   } else {
     statusBarItem.hide();
   }
+}
+
+function startLiveFetch(liveMatch: string){
+  console.log("match",liveMatch)
+  setInterval(async ()=>{
+    try {
+      const liveMatchData = await fetchLiveMatchDetailsFromUrl(liveMatch);
+      updateLiveStatusBar(liveMatchData);
+    } catch (err) {
+      console.log("err", err);
+    }
+  },10000)
 }
 
 export function deactivate() {}
