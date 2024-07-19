@@ -102,7 +102,6 @@ function updateLiveStatusBar(liveMatchData: LiveMatch) {
 }
 
 function startLiveFetch(liveMatch: string){
-  console.log("match",liveMatch)
   setInterval(async ()=>{
     try {
       const liveMatchData = await fetchLiveMatchDetailsFromUrl(liveMatch);
