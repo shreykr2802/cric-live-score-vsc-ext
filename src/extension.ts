@@ -10,6 +10,7 @@ import {
   getLiveMatches,
   getMatchDataForStatusBar,
 } from "./utils";
+import { getLiveUpdatesScore } from "./api/event";
 
 let statusBarItem: vscode.StatusBarItem;
 
@@ -51,7 +52,7 @@ export async function activate(context: vscode.ExtensionContext) {
       try {
         const liveMatchData = await fetchLiveMatchDetailsFromUrl(match.link);
         updateLiveStatusBar(liveMatchData);
-        startLiveFetch(match.link);
+        // startLiveFetch(match.link);
         vscode.window.showInformationMessage("Match Pinned to Status Bar!");
       } catch (err) {
         console.log("err", err);
@@ -63,13 +64,22 @@ export async function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand(
     "cricketScores.showLiveScores",
     async () => {
-      const liveMatch = getFirstLiveMatch(liveMatchesData);
-      if (liveMatch) {
-        const liveMatchData = await fetchLiveMatchDetailsFromUrl(
-          liveMatch.link
-        );
-        updateLiveStatusBar(liveMatchData);
-        startLiveFetch(liveMatch.link);
+      try {
+        const liveMatch = getFirstLiveMatch(liveMatchesData);
+        // if (liveMatch) {
+        //   const liveMatchData = await fetchLiveMatchDetailsFromUrl(
+        //     liveMatch.link
+        //   );
+        //   updateLiveStatusBar(liveMatchData);
+        // }
+        const data = await getLiveUpdatesScore(liveMatch?.link);
+        if (data) {
+          console.log("event data --", data);
+          updateLiveStatusBar(data);
+        }
+      } catch (error) {
+        console.log(error);
+        vscode.window.showErrorMessage("Pinning Match Failed");
       }
     }
   );
@@ -101,15 +111,15 @@ function updateLiveStatusBar(liveMatchData: LiveMatch) {
   }
 }
 
-function startLiveFetch(liveMatch: string){
-  setInterval(async ()=>{
-    try {
-      const liveMatchData = await fetchLiveMatchDetailsFromUrl(liveMatch);
-      updateLiveStatusBar(liveMatchData);
-    } catch (err) {
-      console.log("err", err);
-    }
-  },10000)
-}
+// function startLiveFetch(liveMatch: string){
+//   setInterval(async ()=>{
+//     try {
+//       const liveMatchData = await fetchLiveMatchDetailsFromUrl(liveMatch);
+//       updateLiveStatusBar(liveMatchData);
+//     } catch (err) {
+//       console.log("err", err);
+//     }
+//   },10000)
+// }
 
 export function deactivate() {}
