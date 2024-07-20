@@ -10,7 +10,8 @@ import {
   getLiveMatches,
   getMatchDataForStatusBar,
 } from "./utils";
-import { getLiveUpdatesScore } from "./api/event";
+import { startSSE, stopSSE } from "./api/event";
+import EventSource from "eventsource";
 
 let statusBarItem: vscode.StatusBarItem;
 
@@ -22,6 +23,8 @@ export async function activate(context: vscode.ExtensionContext) {
     100
   );
   context.subscriptions.push(statusBarItem);
+
+  let eventSource: EventSource | undefined;
 
   const liveMatchesData = await fetchLiveMatches();
   const liveMatches = createLiveMatchesProvider(
@@ -49,77 +52,75 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand(
     "cricketScores.pinMatch",
     async (match: Match) => {
-      try {
-        const liveMatchData = await fetchLiveMatchDetailsFromUrl(match.link);
-        updateLiveStatusBar(liveMatchData);
-        // startLiveFetch(match.link);
-        vscode.window.showInformationMessage("Match Pinned to Status Bar!");
-      } catch (err) {
-        console.log("err", err);
-        vscode.window.showErrorMessage("Pinning Match Failed");
-      }
+      vscode.commands.executeCommand("cricketScores.clearPreviousSSE");
+      updateFirstLoadStatusBar(match);
+      startSSE(
+        {
+          url: `http://localhost:3000/livematch/liveUpdates?matchUrl=${match?.link}`,
+          headers: {
+            headers: { SECRET: process.env.SECRET },
+          },
+          onMessage: (data) => {
+            updateLiveStatusBar(data);
+          },
+          onError: (error) => {
+            console.error("SSE error:", error);
+          },
+        },
+        eventSource
+      );
+      vscode.window.showInformationMessage("Match Pinned to Status Bar!");
     }
   );
 
   const disposable = vscode.commands.registerCommand(
     "cricketScores.showLiveScores",
     async () => {
-      try {
-        const liveMatch = getFirstLiveMatch(liveMatchesData);
-        // if (liveMatch) {
-        //   const liveMatchData = await fetchLiveMatchDetailsFromUrl(
-        //     liveMatch.link
-        //   );
-        //   updateLiveStatusBar(liveMatchData);
-        // }
-        const data = await getLiveUpdatesScore(liveMatch?.link);
-        if (data) {
-          console.log("event data --", data);
-          updateLiveStatusBar(data);
-        }
-      } catch (error) {
-        console.log(error);
-        vscode.window.showErrorMessage("Pinning Match Failed");
-      }
+      const liveMatch = getFirstLiveMatch(liveMatchesData);
+      updateFirstLoadStatusBar(liveMatch);
+      startSSE(
+        {
+          url: `http://localhost:3000/livematch/liveUpdates?matchUrl=${liveMatch?.link}`,
+          headers: {
+            headers: { SECRET: process.env.SECRET },
+          },
+          onMessage: (data) => {
+            updateLiveStatusBar(data);
+          },
+          onError: (error) => {
+            console.error("SSE error:", error);
+          },
+        },
+        eventSource
+      );
     }
   );
 
-  context.subscriptions.push(disposable);
+  let stopDisposable = vscode.commands.registerCommand('cricketScores.clearPreviousSSE', () => stopSSE(eventSource));
+
+  context.subscriptions.push(disposable, stopDisposable);
   vscode.commands.executeCommand("cricketScores.showLiveScores");
 }
 
-/* not used anymore
-// function updateStatusBar(match: Match | undefined) {
-//   if (match) {
-//     const matchData = getMatchDataForStatusBar(match);
-//     statusBarItem.text = `$(pulse) ${matchData[0]} vs ${matchData[1]} - ${matchData[2]}`;
-//     statusBarItem.show();
-//   } else {
-//     statusBarItem.hide();
-//   }
-// }
-*/
-
-function updateLiveStatusBar(liveMatchData: LiveMatch) {
-  if (liveMatchData) {
-    const matchData = getLiveMatchDataForStatusBar(liveMatchData);
-    statusBarItem.text = `$(pulse) ${matchData[0]} vs ${matchData[1]} - ${matchData[2]}`;
-    statusBarItem.tooltip = `${matchData[0]} vs ${matchData[1]} - ${matchData[2]}`;
+function updateFirstLoadStatusBar(match: Match | undefined) {
+  if (match) {
+    const matchData = getMatchDataForStatusBar(match);
+    statusBarItem.text = `$(pulse) ${matchData}`;
     statusBarItem.show();
   } else {
     statusBarItem.hide();
   }
 }
 
-// function startLiveFetch(liveMatch: string){
-//   setInterval(async ()=>{
-//     try {
-//       const liveMatchData = await fetchLiveMatchDetailsFromUrl(liveMatch);
-//       updateLiveStatusBar(liveMatchData);
-//     } catch (err) {
-//       console.log("err", err);
-//     }
-//   },10000)
-// }
+function updateLiveStatusBar(liveMatchData: LiveMatch) {
+  if (liveMatchData) {
+    const matchData = getLiveMatchDataForStatusBar(liveMatchData);
+    statusBarItem.text = `$(pulse) ${matchData}`;
+    statusBarItem.tooltip = `${matchData}`;
+    statusBarItem.show();
+  } else {
+    statusBarItem.hide();
+  }
+}
 
 export function deactivate() {}

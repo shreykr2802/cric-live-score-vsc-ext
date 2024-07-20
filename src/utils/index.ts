@@ -24,14 +24,19 @@ function getMatchDataForStatusBar(match: Match) {
   const currentScore = regex.test(matchData[5])
     ? matchData[5].trim()
     : matchData[3].trim();
-  return [team1, team2, currentScore];
+  return `${team1} vs ${team2} - ${currentScore}`;
 }
 
 function getLiveMatchDataForStatusBar(liveMatch: LiveMatch) {
-  const team1 = liveMatch[2].value;
-  const team2 = liveMatch[4].value;
-  const currentScore = liveMatch[5].value ?? liveMatch[3].value;
-  return [team1, team2, currentScore];
+  const isTestMatch = liveMatch[1].value.includes("Test");
+  if(isTestMatch) {
+    const team1 = liveMatch[2].value;
+    const team2 = liveMatch[4].value;
+    const team1Score = liveMatch[3].value;
+    const team2Score = liveMatch[5].value;
+    return `${team1}(${team1Score}) vs ${team2}(${team2Score})`;
+  }
+  return `${liveMatch[2].value} vs ${liveMatch[4].value} - ${liveMatch[5].value ?? liveMatch[3].value}`;
 }
 
 function getMatchDataForActivityBar(matchText: string) {
