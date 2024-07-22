@@ -1,15 +1,21 @@
-import axios from "axios";
 import * as vscode from "vscode";
-
-interface Match {
-  link: string;
-  innerText: string;
-  text: string;
-}
+import { createLiveMatchesProvider } from "./LiveMatchesProvider";
+import { createDoneUpcomingProvider } from "./DoneUpcomingProvider";
+import { fetchLiveMatchDetailsFromUrl, fetchLiveMatches } from "./api";
+import { LiveMatch, Match } from "./types";
+import {
+  getDoneUpcomingMatches,
+  getFirstLiveMatch,
+  getLiveMatchDataForStatusBar,
+  getLiveMatches,
+  getMatchDataForStatusBar,
+} from "./utils";
+import { startSSE, stopSSE } from "./api/event";
+import EventSource from "eventsource";
 
 let statusBarItem: vscode.StatusBarItem;
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   console.log("Cricket Scores extension is now active!");
 
   statusBarItem = vscode.window.createStatusBarItem(
@@ -18,98 +24,103 @@ export function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(statusBarItem);
 
-  const disposable = vscode.commands.registerCommand(
-    "cricketScores.showLiveScores",
-    async () => {
-      try {
-        const liveMatches = await fetchLiveMatches();
-        displayMatches(
-          liveMatches.map((match) => ({
-            innerText: match.innerText
-              .replaceAll("&&", " ")
-              .replaceAll("null", ""),
-            link: match.link,
-            text: match.innerText,
-          }))
-        );
-      } catch (error) {
-        console.log(error);
-        vscode.window.showErrorMessage("Failed to fetch live cricket scores.");
-      }
+  let eventSource: EventSource | undefined;
+
+  const liveMatchesData = await fetchLiveMatches();
+  const liveMatches = createLiveMatchesProvider(
+    getLiveMatches(liveMatchesData)
+  );
+  const doneUpcoming = createDoneUpcomingProvider(
+    getDoneUpcomingMatches(liveMatchesData)
+  );
+
+  vscode.window.registerTreeDataProvider("live-matches", liveMatches.provider);
+  vscode.window.registerTreeDataProvider(
+    "done-upcoming",
+    doneUpcoming.provider
+  );
+
+  vscode.commands.registerCommand("cricketScores.refreshMatches", () => {
+    liveMatches.refresh();
+    doneUpcoming.refresh();
+  });
+
+  vscode.commands.registerCommand("cricketScores.openMatch", (match: Match) => {
+    vscode.window.showInformationMessage(`Match Highlight: ${match}`);
+  });
+
+  vscode.commands.registerCommand(
+    "cricketScores.pinMatch",
+    async (match: Match) => {
+      vscode.commands.executeCommand("cricketScores.clearPreviousSSE");
+      updateFirstLoadStatusBar(match);
+      startSSE(
+        {
+          url: `http://localhost:3000/livematch/liveUpdates?matchUrl=${match?.link}`,
+          headers: {
+            headers: { SECRET: process.env.SECRET },
+          },
+          onMessage: (data) => {
+            updateLiveStatusBar(data);
+          },
+          onError: (error) => {
+            console.error("SSE error:", error);
+          },
+        },
+        eventSource
+      );
+      vscode.window.showInformationMessage("Match Pinned to Status Bar!");
     }
   );
 
-  context.subscriptions.push(disposable);
+  const disposable = vscode.commands.registerCommand(
+    "cricketScores.showLiveScores",
+    async () => {
+      const liveMatch = getFirstLiveMatch(liveMatchesData);
+      updateFirstLoadStatusBar(liveMatch);
+      startSSE(
+        {
+          url: `http://localhost:3000/livematch/liveUpdates?matchUrl=${liveMatch?.link}`,
+          headers: {
+            headers: { SECRET: process.env.SECRET },
+          },
+          onMessage: (data) => {
+            updateLiveStatusBar(data);
+          },
+          onError: (error) => {
+            console.error("SSE error:", error);
+          },
+        },
+        eventSource
+      );
+    }
+  );
 
+  let stopDisposable = vscode.commands.registerCommand('cricketScores.clearPreviousSSE', () => stopSSE(eventSource));
+
+  context.subscriptions.push(disposable, stopDisposable);
   vscode.commands.executeCommand("cricketScores.showLiveScores");
 }
 
-async function fetchLiveMatches(): Promise<Match[]> {
-  const response = await axios.get("http://localhost:3000/live", {
-    headers: { SECRET: process.env.SECRET },
-  });
-  return response.data;
-}
-
-function getFirstLiveMatch(matches: Match[]) {
-  return matches.find((match) => match.innerText.includes("LIVE"));
-}
-
-function displayMatches(matches: Match[]) {
-  const panel = vscode.window.createWebviewPanel(
-    "cricketScores",
-    "Live Cricket Scores",
-    vscode.ViewColumn.One,
-    {}
-  );
-
-  panel.webview.html = getWebviewContent(matches);
-  updateStatusBar(getFirstLiveMatch(matches) ?? matches[0]);
-}
-
-function updateStatusBar(match: Match) {
-  if (match && match.innerText.includes("LIVE")) {
-    const matchData = match.text.split("&&");
-    const regex = /\(\d?\d?(\.\d+)? ov\)|\(\d?\d?(\.\d+)?\/\d+ ov,/;
-    const team1 = matchData[2].trim();
-    const team2 = matchData[4].trim();
-    const currentScore = regex.test(matchData[5]) ? matchData[5].trim() : matchData[3].trim();
-    statusBarItem.text = `$(pulse) ${team1} vs ${team2} - ${currentScore}`;
+function updateFirstLoadStatusBar(match: Match | undefined) {
+  if (match) {
+    const matchData = getMatchDataForStatusBar(match);
+    statusBarItem.text = `$(pulse) ${matchData}`;
     statusBarItem.show();
   } else {
     statusBarItem.hide();
   }
 }
 
-function getWebviewContent(matches: Match[]): string {
-  return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Live Cricket Scores</title>
-        <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .match { margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-            .live { background-color: #e6ffe6; }
-        </style>
-    </head>
-    <body>
-        <h1>Live Cricket Scores</h1>
-        ${matches
-          .map(
-            (match) => `
-            <div class="match ${
-              match.innerText.includes("LIVE") ? "live" : ""
-            }">
-                <h3>${match.innerText}</h3>
-                <a href="${match.link}" target="_blank">View details</a>
-            </div>
-        `
-          )
-          .join("")}
-    </body>
-    </html>`;
+function updateLiveStatusBar(liveMatchData: LiveMatch) {
+  if (liveMatchData) {
+    const matchData = getLiveMatchDataForStatusBar(liveMatchData);
+    statusBarItem.text = `$(pulse) ${matchData}`;
+    statusBarItem.tooltip = `${matchData}`;
+    statusBarItem.show();
+  } else {
+    statusBarItem.hide();
+  }
 }
 
 export function deactivate() {}
