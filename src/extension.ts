@@ -11,7 +11,6 @@ import {
   getMatchDataForStatusBar,
 } from "./utils";
 import { startSSE, stopSSE } from "./api/event";
-import EventSource from "eventsource";
 
 let statusBarItem: vscode.StatusBarItem;
 
@@ -23,8 +22,6 @@ export async function activate(context: vscode.ExtensionContext) {
     100
   );
   context.subscriptions.push(statusBarItem);
-
-  let eventSource: EventSource | undefined;
 
   const liveMatchesData = await fetchLiveMatches();
   const liveMatches = createLiveMatchesProvider(
@@ -52,11 +49,10 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand(
     "cricketScores.pinMatch",
     async (match: Match) => {
-      vscode.commands.executeCommand("cricketScores.clearPreviousSSE");
       updateFirstLoadStatusBar(match);
       startSSE(
         {
-          url: `http://localhost:3000/livematch/liveUpdates?matchUrl=${match?.link}`,
+          url: `https://cric-api-gamma.vercel.app/livematch/liveUpdates?matchUrl=${match?.link}`,
           headers: {
             headers: { SECRET: process.env.SECRET },
           },
@@ -66,8 +62,7 @@ export async function activate(context: vscode.ExtensionContext) {
           onError: (error) => {
             console.error("SSE error:", error);
           },
-        },
-        eventSource
+        }
       );
       vscode.window.showInformationMessage("Match Pinned to Status Bar!");
     }
@@ -80,7 +75,7 @@ export async function activate(context: vscode.ExtensionContext) {
       updateFirstLoadStatusBar(liveMatch);
       startSSE(
         {
-          url: `http://localhost:3000/livematch/liveUpdates?matchUrl=${liveMatch?.link}`,
+          url: `https://cric-api-gamma.vercel.app/livematch/liveUpdates?matchUrl=${liveMatch?.link}`,
           headers: {
             headers: { SECRET: process.env.SECRET },
           },
@@ -90,15 +85,12 @@ export async function activate(context: vscode.ExtensionContext) {
           onError: (error) => {
             console.error("SSE error:", error);
           },
-        },
-        eventSource
+        }
       );
     }
   );
 
-  let stopDisposable = vscode.commands.registerCommand('cricketScores.clearPreviousSSE', () => stopSSE(eventSource));
-
-  context.subscriptions.push(disposable, stopDisposable);
+  context.subscriptions.push(disposable);
   vscode.commands.executeCommand("cricketScores.showLiveScores");
 }
 
@@ -123,4 +115,6 @@ function updateLiveStatusBar(liveMatchData: LiveMatch) {
   }
 }
 
-export function deactivate() {}
+export function deactivate() {
+  stopSSE();
+}

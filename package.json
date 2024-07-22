@@ -75,6 +75,10 @@
       {
         "view": "live-matches",
         "contents": "No Live Matches at the moment!"
+      },
+      {
+        "view": "done-upcoming",
+        "contents": "No Upcoming Matches at the moment!"
       }
     ]
   },
